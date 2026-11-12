@@ -19,4 +19,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Reconciliation.UnitTests" />
+  </ItemGroup>
+
 </Project>

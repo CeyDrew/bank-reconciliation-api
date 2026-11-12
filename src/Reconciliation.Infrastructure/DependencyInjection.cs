@@ -5,6 +5,7 @@ using Microsoft.Extensions.Http.Resilience;
 using Polly;
 using Quartz;
 using Reconciliation.Application.Abstractions;
+using Reconciliation.Application.Matching;
 using Reconciliation.Application.Transactions;
 using Reconciliation.Infrastructure.Banking;
 using Reconciliation.Infrastructure.Jobs;
@@ -74,6 +75,7 @@ public static class DependencyInjection
     {
         var bankOptions = configuration.GetSection(BankApiOptions.SectionName).Get<BankApiOptions>() ?? new BankApiOptions();
         services.Configure<TransactionImportOptions>(configuration.GetSection(TransactionImportOptions.SectionName));
+        services.Configure<ReconciliationOptions>(configuration.GetSection(ReconciliationOptions.SectionName));
 
         services
             .AddHttpClient<IBankClient, FakeBankClient>(client =>
@@ -100,8 +102,8 @@ public static class DependencyInjection
 
     private static void AddJobs(this IServiceCollection services, IConfiguration configuration)
     {
-        var jobOptions = configuration.GetSection(TransactionImportJobOptions.SectionName).Get<TransactionImportJobOptions>()
-            ?? new TransactionImportJobOptions();
+        var jobOptions = configuration.GetSection(BankSyncJobOptions.SectionName).Get<BankSyncJobOptions>()
+            ?? new BankSyncJobOptions();
         if (!jobOptions.Enabled)
         {
             return;
@@ -109,10 +111,10 @@ public static class DependencyInjection
 
         services.AddQuartz(quartz =>
         {
-            quartz.AddJob<TransactionImportJob>(job => job.WithIdentity(TransactionImportJob.Key));
+            quartz.AddJob<BankSyncJob>(job => job.WithIdentity(BankSyncJob.Key));
             quartz.AddTrigger(trigger => trigger
-                .ForJob(TransactionImportJob.Key)
-                .WithIdentity("transaction-import-trigger")
+                .ForJob(BankSyncJob.Key)
+                .WithIdentity("bank-sync-trigger")
                 .StartNow()
                 .WithSimpleSchedule(schedule => schedule
                     .WithInterval(TimeSpan.FromSeconds(jobOptions.IntervalSeconds))

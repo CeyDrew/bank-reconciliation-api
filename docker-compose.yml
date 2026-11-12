@@ -11,7 +11,7 @@ services:
       Database__MigrateOnStartup: "true"
       Database__Seed: "true"
       FakeBank__BaseUrl: "http://fake-bank:8080"
-      Jobs__TransactionImport__Enabled: "true"
+      Jobs__BankSync__Enabled: "true"
     ports:
       - "8080:8080"
     depends_on:

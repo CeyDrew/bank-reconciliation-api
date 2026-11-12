@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Reconciliation.Application.Accounts;
 using Reconciliation.Application.Customers;
 using Reconciliation.Application.Invoices;
+using Reconciliation.Application.Matching;
 using Reconciliation.Application.Transactions;
 
 namespace Reconciliation.Application;
@@ -24,6 +25,10 @@ public static class DependencyInjection
         services.AddScoped<InvoiceService>();
         services.AddScoped<TransactionService>();
         services.AddScoped<TransactionImportService>();
+
+        services.AddSingleton<MatchingEngine>();
+        services.AddScoped<ReconciliationService>();
+        services.AddScoped<MatchQueries>();
 
         return services;
     }
