@@ -8,6 +8,8 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Default: "Server=mssql,1433;Database=Reconciliation;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
       ConnectionStrings__Redis: "redis:6379"
+      Database__MigrateOnStartup: "true"
+      Database__Seed: "true"
       FakeBank__BaseUrl: "http://fake-bank:8080"
     ports:
       - "8080:8080"

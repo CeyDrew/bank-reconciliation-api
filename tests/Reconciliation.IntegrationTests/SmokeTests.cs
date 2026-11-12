@@ -10,7 +10,7 @@ public class SmokeTests(WebApplicationFactory<Program> factory) : IClassFixture<
     [InlineData("/health")]
     [InlineData("/api/v1/info")]
     [InlineData("/swagger/v1/swagger.json")]
-    public async Task Endpoint_ShouldReturnOk(string url)
+    public async Task Endpoint_returns_ok(string url)
     {
         var client = factory.CreateClient();
 
