@@ -7,11 +7,13 @@ using Quartz;
 using Reconciliation.Application.Abstractions;
 using Reconciliation.Application.Matching;
 using Reconciliation.Application.Transactions;
+using Reconciliation.Application.Webhooks;
 using Reconciliation.Infrastructure.Auth;
 using Reconciliation.Infrastructure.Banking;
 using Reconciliation.Infrastructure.Jobs;
 using Reconciliation.Infrastructure.Locking;
 using Reconciliation.Infrastructure.Persistence;
+using Reconciliation.Infrastructure.Webhooks;
 using StackExchange.Redis;
 
 namespace Reconciliation.Infrastructure;
@@ -25,6 +27,7 @@ public static class DependencyInjection
         services.AddAuth(configuration);
         services.AddLocking(configuration);
         services.AddBankClient(configuration);
+        services.AddWebhooks(configuration);
         services.AddJobs(configuration);
 
         return services;
@@ -115,26 +118,64 @@ public static class DependencyInjection
             });
     }
 
+    private static void AddWebhooks(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<WebhookDispatchOptions>(configuration.GetSection(WebhookDispatchOptions.SectionName));
+        services.AddOptions<WebhookOptions>()
+            .Bind(configuration.GetSection(WebhookOptions.SectionName))
+            .ValidateDataAnnotations()
+            .Validate(o => !o.Enabled || o.Secret.Length >= 32,
+                "Webhooks:Secret must be at least 32 characters when Webhooks:Url is set. Set WEBHOOK_SECRET in .env.")
+            .ValidateOnStart();
+
+        services
+            .AddHttpClient<IWebhookSender, HttpWebhookSender>()
+            // Retrying a POST is safe here only because every event carries an idempotency key.
+            // A few quick retries smooth over blips; longer outages are handled by the outbox's own backoff.
+            .AddStandardResilienceHandler(options =>
+            {
+                options.Retry.MaxRetryAttempts = 3;
+                options.Retry.BackoffType = DelayBackoffType.Exponential;
+                options.Retry.UseJitter = true;
+                options.Retry.Delay = TimeSpan.FromSeconds(1);
+                options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(10);
+                options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(30);
+                options.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(30);
+                options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(60);
+            });
+    }
+
     private static void AddJobs(this IServiceCollection services, IConfiguration configuration)
     {
-        var jobOptions = configuration.GetSection(BankSyncJobOptions.SectionName).Get<BankSyncJobOptions>()
-            ?? new BankSyncJobOptions();
-        if (!jobOptions.Enabled)
+        var bankSync = configuration.GetSection(BankSyncJobOptions.SectionName).Get<BankSyncJobOptions>() ?? new BankSyncJobOptions();
+        var webhooks = configuration.GetSection(WebhookOptions.SectionName).Get<WebhookOptions>() ?? new WebhookOptions();
+        if (!bankSync.Enabled && !webhooks.Enabled)
         {
             return;
         }
 
         services.AddQuartz(quartz =>
         {
-            quartz.AddJob<BankSyncJob>(job => job.WithIdentity(BankSyncJob.Key));
-            quartz.AddTrigger(trigger => trigger
-                .ForJob(BankSyncJob.Key)
-                .WithIdentity("bank-sync-trigger")
-                .StartNow()
-                .WithSimpleSchedule(schedule => schedule
-                    .WithInterval(TimeSpan.FromSeconds(jobOptions.IntervalSeconds))
-                    .RepeatForever()));
+            if (bankSync.Enabled)
+            {
+                AddRepeatingJob<BankSyncJob>(quartz, BankSyncJob.Key, TimeSpan.FromSeconds(bankSync.IntervalSeconds));
+            }
+
+            if (webhooks.Enabled)
+            {
+                AddRepeatingJob<WebhookDispatchJob>(quartz, WebhookDispatchJob.Key, TimeSpan.FromSeconds(webhooks.DispatchIntervalSeconds));
+            }
         });
         services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
+    }
+
+    private static void AddRepeatingJob<TJob>(IQuartzBuilder quartz, JobKey key, TimeSpan interval) where TJob : IJob
+    {
+        quartz.AddJob<TJob>(job => job.WithIdentity(key));
+        quartz.AddTrigger(trigger => trigger
+            .ForJob(key)
+            .WithIdentity($"{key.Name}-trigger")
+            .StartNow()
+            .WithSimpleSchedule(schedule => schedule.WithInterval(interval).RepeatForever()));
     }
 }

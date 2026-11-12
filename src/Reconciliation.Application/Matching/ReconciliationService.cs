@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Reconciliation.Application.Abstractions;
 using Reconciliation.Application.Auditing;
 using Reconciliation.Application.Common;
+using Reconciliation.Application.Webhooks;
 using Reconciliation.Domain.Entities;
 using Reconciliation.Domain.Enums;
 
@@ -30,6 +31,7 @@ public class ReconciliationService(
     MatchingEngine engine,
     IDistributedLock distributedLock,
     AuditTrail audit,
+    WebhookOutbox outbox,
     TimeProvider clock,
     IOptions<ReconciliationOptions> options,
     ILogger<ReconciliationService> logger)
@@ -82,6 +84,7 @@ public class ReconciliationService(
                 var match = Match.Create(transaction, invoicesById[allocation.InvoiceId], allocation.Amount,
                     allocation.Score, allocation.Reason, MatchMethod.Automatic, SystemUser, clock.GetUtcNow());
                 db.Matches.Add(match);
+                outbox.MatchCreated(match);
                 audit.Record("match.created", "Match", match.Id, new
                 {
                     TransactionId = transaction.Id,
@@ -96,7 +99,7 @@ public class ReconciliationService(
             matched++;
         }
 
-        // One save: matches, transaction and invoice updates are stored together or not at all.
+        // One save: matches, transaction and invoice updates, audit entries and webhook events are stored together or not at all.
         // If someone changed an invoice meanwhile, the row version check fails and the next run retries.
         await db.SaveChangesAsync(ct);
 

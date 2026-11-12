@@ -4,6 +4,7 @@ using Reconciliation.Application.Abstractions;
 using Reconciliation.Application.Auditing;
 using Reconciliation.Application.Common;
 using Reconciliation.Application.Transactions;
+using Reconciliation.Application.Webhooks;
 using Reconciliation.Domain.Entities;
 using Reconciliation.Domain.Enums;
 
@@ -49,6 +50,7 @@ public class ManualMatchingService(
     IDistributedLock distributedLock,
     ICurrentUser currentUser,
     AuditTrail audit,
+    WebhookOutbox outbox,
     TimeProvider clock,
     IValidator<ManualMatchRequest> matchValidator,
     IValidator<ReasonRequest> reasonValidator)
@@ -75,6 +77,7 @@ public class ManualMatchingService(
                 currentUser.UserName, clock.GetUtcNow());
             db.Matches.Add(match);
             matches.Add(match);
+            outbox.MatchCreated(match);
 
             audit.Record("match.created", "Match", match.Id, new
             {
@@ -104,6 +107,7 @@ public class ManualMatchingService(
         match.Reverse();
         match.Transaction.ExcludeFromAutomaticMatching();
         db.Matches.Remove(match);
+        outbox.MatchReversed(match, request.Reason);
 
         audit.Record("match.reversed", "Match", match.Id, new
         {

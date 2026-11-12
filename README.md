@@ -5,7 +5,7 @@ Work in progress. A .NET 10 Web API that fetches bank transactions, matches inco
 ## Quick start
 
 ```bash
-cp .env.example .env   # set the database password, JWT key and demo user passwords
+cp .env.example .env   # set the database password, JWT key, demo user passwords and webhook secret
 docker compose up --build
 ```
 
@@ -72,6 +72,23 @@ the rest wait for manual matching.
 - Two open invoices with the same amount and no reference are never guessed.
 - `GET /api/v1/transactions/{id}/suggestions` shows the engine's proposal, score and reasons without storing anything.
 - `POST /api/v1/reconciliation/run` runs matching immediately; `GET /api/v1/matches` lists matches with their reasons.
+
+## ERP webhooks
+
+Every match and match reversal is sent to the ERP as a signed webhook. There is no real ERP in this project: the FakeBank
+container also hosts a **fake ERP receiver** (`POST /erp/webhooks`, inspect with `GET http://localhost:8081/erp/webhooks`)
+that implements the receiving side of the contract. Point `Webhooks__Url` at any endpoint that does the same.
+
+- **Transactional outbox:** the event row is saved in the same database transaction as the match, so an event is never
+  lost and never sent for a change that was rolled back. A Quartz job sends pending events every 10 seconds, oldest first.
+- **Signature:** `X-Webhook-Signature: sha256=hex(HMAC-SHA256(secret, "{timestamp}.{body}"))` with `X-Webhook-Timestamp`.
+  The receiver checks the signature in constant time and rejects timestamps older than 5 minutes (replay protection).
+- **Idempotency:** `Idempotency-Key` (= event id) lets the receiver ignore repeats. Delivery is at least once, so repeats happen;
+  the fake ERP sometimes answers 503 after booking an event to show this.
+- **Retries:** Polly retries quickly within a call (safe for POST because of the idempotency key); after that the outbox retries
+  with 30 s, 1 min, 2 min ... up to 1 hour. 4xx responses (except 408/429) and events out of attempts become `Failed`.
+- **Order:** a waiting event is never overtaken, so `match.created` always arrives before its `match.reversed`.
+- **Admin:** `GET /api/v1/webhooks/deliveries?status=Failed`, `POST /api/v1/webhooks/deliveries/{id}/retry`.
 
 ## Build and test
 

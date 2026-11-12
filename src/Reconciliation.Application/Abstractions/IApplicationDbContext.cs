@@ -17,6 +17,7 @@ public interface IApplicationDbContext
     DbSet<Match> Matches { get; }
     DbSet<User> Users { get; }
     DbSet<AuditEntry> AuditEntries { get; }
+    DbSet<WebhookDelivery> WebhookDeliveries { get; }
 
     ChangeTracker ChangeTracker { get; }
 

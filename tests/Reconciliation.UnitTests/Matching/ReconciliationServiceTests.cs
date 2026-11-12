@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Reconciliation.Application.Auditing;
 using Reconciliation.Application.Matching;
+using Reconciliation.Application.Webhooks;
 using Reconciliation.Domain.Entities;
 using Reconciliation.Domain.Enums;
 using Reconciliation.FakeBank.Statements;
@@ -66,6 +67,7 @@ public class ReconciliationServiceTests
         });
 
         _db.Matches.Should().OnlyContain(m => m.Method == MatchMethod.Automatic && m.CreatedBy == "system" && m.Score >= 80);
+        _db.WebhookDeliveries.Should().HaveCount(7).And.OnlyContain(d => d.EventType == WebhookEvents.MatchCreated && d.Status == WebhookStatus.Pending);
     }
 
     [Fact]
@@ -114,7 +116,7 @@ public class ReconciliationServiceTests
     }
 
     private ReconciliationService CreateService(int threshold = 80) =>
-        new(_db, new MatchingEngine(), _lock, new AuditTrail(_db, new StubCurrentUser("system"), _clock), _clock, Options.Create(new ReconciliationOptions { AutoMatchThreshold = threshold }),
+        new(_db, new MatchingEngine(), _lock, new AuditTrail(_db, new StubCurrentUser("system"), _clock), new WebhookOutbox(_db, _clock), _clock, Options.Create(new ReconciliationOptions { AutoMatchThreshold = threshold }),
             NullLogger<ReconciliationService>.Instance);
 
     private async Task SeedWithScenariosAsync()

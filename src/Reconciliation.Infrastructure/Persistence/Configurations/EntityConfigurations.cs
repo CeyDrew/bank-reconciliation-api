@@ -100,6 +100,19 @@ internal class UserConfiguration : IEntityTypeConfiguration<User>
     }
 }
 
+internal class WebhookDeliveryConfiguration : IEntityTypeConfiguration<WebhookDelivery>
+{
+    public void Configure(EntityTypeBuilder<WebhookDelivery> builder)
+    {
+        builder.Property(d => d.EventType).HasMaxLength(100).IsUnicode(false);
+        builder.Property(d => d.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(d => d.LastError).HasMaxLength(WebhookDelivery.MaxErrorLength);
+
+        // The dispatcher reads pending events oldest first.
+        builder.HasIndex(d => new { d.Status, d.CreatedAt });
+    }
+}
+
 internal class AuditEntryConfiguration : IEntityTypeConfiguration<AuditEntry>
 {
     public void Configure(EntityTypeBuilder<AuditEntry> builder)

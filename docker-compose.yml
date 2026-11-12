@@ -15,6 +15,8 @@ services:
       Jwt__SigningKey: "${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env}"
       SeedUsers__AdminPassword: "${SEED_ADMIN_PASSWORD:?Set SEED_ADMIN_PASSWORD in .env}"
       SeedUsers__AccountantPassword: "${SEED_ACCOUNTANT_PASSWORD:?Set SEED_ACCOUNTANT_PASSWORD in .env}"
+      Webhooks__Url: "http://fake-bank:8080/erp/webhooks"
+      Webhooks__Secret: "${WEBHOOK_SECRET:?Set WEBHOOK_SECRET in .env}"
     ports:
       - "8080:8080"
     depends_on:
@@ -35,6 +37,9 @@ services:
       # Make the bank unreliable on purpose to exercise retries and the circuit breaker.
       Chaos__FailureRate: "0.2"
       Chaos__MaxLatencyMs: "500"
+      # The fake ERP sometimes answers 503 after booking a webhook, to show that idempotency prevents double booking.
+      Erp__WebhookSecret: "${WEBHOOK_SECRET:?Set WEBHOOK_SECRET in .env}"
+      Erp__FailAfterAcceptRate: "0.2"
     ports:
       - "8081:8080"
 

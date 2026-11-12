@@ -9,6 +9,7 @@ using Reconciliation.Application.Invoices;
 using Reconciliation.Application.Matching;
 using Reconciliation.Application.Transactions;
 using Reconciliation.Application.Users;
+using Reconciliation.Application.Webhooks;
 
 namespace Reconciliation.Application;
 
@@ -38,6 +39,10 @@ public static class DependencyInjection
         services.AddScoped<AuditQueries>();
         services.AddScoped<AuthService>();
         services.AddScoped<UserService>();
+
+        services.AddScoped<WebhookOutbox>();
+        services.AddScoped<WebhookDispatcher>();
+        services.AddScoped<WebhookAdminService>();
 
         return services;
     }

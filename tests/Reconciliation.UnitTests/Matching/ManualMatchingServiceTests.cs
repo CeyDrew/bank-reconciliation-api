@@ -7,6 +7,7 @@ using Microsoft.Extensions.Time.Testing;
 using Reconciliation.Application.Auditing;
 using Reconciliation.Application.Common;
 using Reconciliation.Application.Matching;
+using Reconciliation.Application.Webhooks;
 using Reconciliation.Domain.Common;
 using Reconciliation.Domain.Entities;
 using Reconciliation.Domain.Enums;
@@ -51,6 +52,7 @@ public class ManualMatchingServiceTests
         (await Reload(transaction)).Status.Should().Be(TransactionStatus.Matched);
         (await Reload(second)).Status.Should().Be(InvoiceStatus.PartiallyPaid);
         _db.AuditEntries.Should().HaveCount(2).And.OnlyContain(a => a.Action == "match.created" && a.UserName == "accountant@example.com");
+        _db.WebhookDeliveries.Should().HaveCount(2).And.OnlyContain(d => d.EventType == WebhookEvents.MatchCreated);
     }
 
     [Fact]
@@ -66,6 +68,7 @@ public class ManualMatchingServiceTests
         await act.Should().ThrowAsync<DomainException>();
         _db.ChangeTracker.Clear();
         (await _db.Matches.CountAsync()).Should().Be(0);
+        (await _db.WebhookDeliveries.CountAsync()).Should().Be(0);
         (await _db.AuditEntries.CountAsync()).Should().Be(0);
     }
 
@@ -110,6 +113,9 @@ public class ManualMatchingServiceTests
         reloaded.Status.Should().Be(TransactionStatus.Unmatched);
         reloaded.RequiresManualMatching.Should().BeTrue();
         _db.AuditEntries.Should().Contain(a => a.Action == "match.reversed" && a.Details!.Contains("Wrong customer"));
+        _db.WebhookDeliveries.Select(d => d.EventType).Should().Equal(WebhookEvents.MatchCreated, WebhookEvents.MatchReversed);
+        _db.WebhookDeliveries.Single(d => d.EventType == WebhookEvents.MatchReversed).Payload
+            .Should().Contain("\"invoiceStatus\":\"Open\"").And.Contain("\"reason\":\"Wrong customer\"");
     }
 
     [Fact]
@@ -147,12 +153,12 @@ public class ManualMatchingServiceTests
     }
 
     private ManualMatchingService CreateService() =>
-        new(_db, _lock, _user, new AuditTrail(_db, _user, _clock), _clock, new ManualMatchRequestValidator(), new ReasonRequestValidator());
+        new(_db, _lock, _user, new AuditTrail(_db, _user, _clock), new WebhookOutbox(_db, _clock), _clock, new ManualMatchRequestValidator(), new ReasonRequestValidator());
 
     private ReconciliationService CreateReconciliation()
     {
         var system = new StubCurrentUser("system");
-        return new ReconciliationService(_db, new MatchingEngine(), _lock, new AuditTrail(_db, system, _clock), _clock,
+        return new ReconciliationService(_db, new MatchingEngine(), _lock, new AuditTrail(_db, system, _clock), new WebhookOutbox(_db, _clock), _clock,
             Options.Create(new ReconciliationOptions()), NullLogger<ReconciliationService>.Instance);
     }
 

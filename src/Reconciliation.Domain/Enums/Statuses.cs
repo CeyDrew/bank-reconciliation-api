@@ -27,3 +27,12 @@ public enum UserRole
     Admin,
     Accountant
 }
+
+public enum WebhookStatus
+{
+    Pending,
+    Delivered,
+
+    /// <summary>Gave up: rejected by the ERP or out of attempts. Needs a person.</summary>
+    Failed
+}

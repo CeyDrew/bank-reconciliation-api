@@ -18,7 +18,10 @@ public class ChaosMiddleware(RequestDelegate next, IOptionsMonitor<ChaosOptions>
 {
     public async Task InvokeAsync(HttpContext context)
     {
-        if (!context.Request.Path.StartsWithSegments("/api"))
+        var path = context.Request.Path;
+        var isChaosTarget = path.StartsWithSegments("/api")
+            || (HttpMethods.IsPost(context.Request.Method) && path.StartsWithSegments("/erp"));
+        if (!isChaosTarget)
         {
             await next(context);
             return;
