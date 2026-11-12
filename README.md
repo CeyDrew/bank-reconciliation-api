@@ -15,6 +15,19 @@ docker compose up --build
 
 Compose applies migrations and seeds fictional demo data (2 accounts, 4 customers, 8 invoices) on startup.
 
+## How transactions arrive
+
+- **FakeBank** simulates a bank statement API (`GET /api/v1/accounts/{iban}/transactions?from=&page=`).
+  The main account has 11 scripted movements covering matching edge cases; every account also gets random
+  movements derived from (IBAN, time slot), so data is stable across restarts and new movements appear over time.
+  It fails 20% of requests and adds up to 500 ms latency on purpose (`Chaos__*` settings).
+- A **Quartz.NET** job imports new movements of every active account every 5 minutes (`Jobs__TransactionImport__*`).
+  `POST /api/v1/transactions/import` runs an import immediately.
+- The HTTP client uses the **Polly** standard resilience pipeline: retries with exponential backoff and jitter,
+  per-attempt timeout and a circuit breaker.
+- A **Redis** lock (`SET NX PX` + compare-and-delete release) makes sure only one import runs at a time across all
+  API instances. A unique index on (account, bank transaction id) guarantees a movement is never stored twice.
+
 ## Build and test
 
 ```bash

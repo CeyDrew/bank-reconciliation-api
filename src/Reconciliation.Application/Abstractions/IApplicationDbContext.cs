@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Reconciliation.Domain.Entities;
 
 namespace Reconciliation.Application.Abstractions;
@@ -14,6 +15,8 @@ public interface IApplicationDbContext
     DbSet<Invoice> Invoices { get; }
     DbSet<BankTransaction> BankTransactions { get; }
     DbSet<Match> Matches { get; }
+
+    ChangeTracker ChangeTracker { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

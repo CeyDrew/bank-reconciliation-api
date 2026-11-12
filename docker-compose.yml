@@ -11,6 +11,7 @@ services:
       Database__MigrateOnStartup: "true"
       Database__Seed: "true"
       FakeBank__BaseUrl: "http://fake-bank:8080"
+      Jobs__TransactionImport__Enabled: "true"
     ports:
       - "8080:8080"
     depends_on:
@@ -28,6 +29,9 @@ services:
     container_name: recon-fake-bank
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      # Make the bank unreliable on purpose to exercise retries and the circuit breaker.
+      Chaos__FailureRate: "0.2"
+      Chaos__MaxLatencyMs: "500"
     ports:
       - "8081:8080"
 
