@@ -7,6 +7,7 @@ using Reconciliation.Application.Auth;
 using Reconciliation.Application.Customers;
 using Reconciliation.Application.Invoices;
 using Reconciliation.Application.Matching;
+using Reconciliation.Application.Reports;
 using Reconciliation.Application.Transactions;
 using Reconciliation.Application.Users;
 using Reconciliation.Application.Webhooks;
@@ -43,6 +44,8 @@ public static class DependencyInjection
         services.AddScoped<WebhookOutbox>();
         services.AddScoped<WebhookDispatcher>();
         services.AddScoped<WebhookAdminService>();
+
+        services.AddScoped<ReconciliationReportService>();
 
         return services;
     }

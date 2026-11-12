@@ -17,20 +17,37 @@ jobs:
           global-json-file: global.json
 
       - name: Restore
-        run: dotnet restore
+        run: |
+          dotnet restore
+          dotnet tool restore
 
       - name: Build
         run: dotnet build --no-restore -c Release
 
+      # Integration tests start SQL Server and Redis with Testcontainers; the runner has Docker.
       - name: Test
-        run: dotnet test --no-build -c Release --collect:"XPlat Code Coverage" --results-directory ./TestResults
+        run: >
+          dotnet test --no-build -c Release
+          --settings coverlet.runsettings
+          --collect:"XPlat Code Coverage"
+          --results-directory ./TestResults
+          --logger "trx"
+
+      - name: Coverage report
+        if: always()
+        run: >
+          dotnet reportgenerator
+          -reports:"TestResults/**/coverage.cobertura.xml"
+          -targetdir:"coverage"
+          -reporttypes:"MarkdownSummaryGithub;Cobertura;HtmlInline"
+          && cat coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage
-          path: TestResults/**/coverage.cobertura.xml
+          path: coverage
 
   docker:
     runs-on: ubuntu-latest

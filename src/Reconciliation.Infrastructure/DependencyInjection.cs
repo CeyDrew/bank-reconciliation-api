@@ -149,7 +149,8 @@ public static class DependencyInjection
     {
         var bankSync = configuration.GetSection(BankSyncJobOptions.SectionName).Get<BankSyncJobOptions>() ?? new BankSyncJobOptions();
         var webhooks = configuration.GetSection(WebhookOptions.SectionName).Get<WebhookOptions>() ?? new WebhookOptions();
-        if (!bankSync.Enabled && !webhooks.Enabled)
+        var dispatchJob = webhooks.Enabled && webhooks.AutoDispatch;
+        if (!bankSync.Enabled && !dispatchJob)
         {
             return;
         }
@@ -161,7 +162,7 @@ public static class DependencyInjection
                 AddRepeatingJob<BankSyncJob>(quartz, BankSyncJob.Key, TimeSpan.FromSeconds(bankSync.IntervalSeconds));
             }
 
-            if (webhooks.Enabled)
+            if (dispatchJob)
             {
                 AddRepeatingJob<WebhookDispatchJob>(quartz, WebhookDispatchJob.Key, TimeSpan.FromSeconds(webhooks.DispatchIntervalSeconds));
             }

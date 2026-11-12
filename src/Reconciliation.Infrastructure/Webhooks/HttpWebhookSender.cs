@@ -21,6 +21,9 @@ public class WebhookOptions
     [Range(1, 3600)]
     public int DispatchIntervalSeconds { get; init; } = 10;
 
+    /// <summary>Run the dispatch job on a timer. Tests switch it off and dispatch explicitly.</summary>
+    public bool AutoDispatch { get; init; } = true;
+
     public bool Enabled => !string.IsNullOrWhiteSpace(Url);
 }
 

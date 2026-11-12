@@ -73,6 +73,13 @@ the rest wait for manual matching.
 - `GET /api/v1/transactions/{id}/suggestions` shows the engine's proposal, score and reasons without storing anything.
 - `POST /api/v1/reconciliation/run` runs matching immediately; `GET /api/v1/matches` lists matches with their reasons.
 
+## Daily reconciliation report
+
+`GET /api/v1/reports/reconciliation?from=2026-11-01&to=2026-11-13[&accountId=][&currency=TRY]` returns, per booking day
+and in total: money received, matched, **unmatched (the difference still to explain, including overpaid remainders)**,
+ignored and paid out, the match rate, and open / overdue invoices. Sums are computed by SQL Server in one `GROUP BY`;
+days without movements are included so the report has no gaps.
+
 ## ERP webhooks
 
 Every match and match reversal is sent to the ERP as a signed webhook. There is no real ERP in this project: the FakeBank
@@ -94,8 +101,15 @@ that implements the receiving side of the contract. Point `Webhooks__Url` at any
 
 ```bash
 dotnet build
-dotnet test
+dotnet test        # integration tests need Docker running
 ```
+
+- **Unit tests** (no Docker): domain rules, matching engine edge cases, import, outbox dispatcher, signing, auth.
+- **Integration tests** (Testcontainers): real SQL Server and Redis, the API and the FakeBank in one process.
+  They run the whole flow (import, matching, report, signed webhooks to the fake ERP, manual matching) and check
+  what an in-memory database can't: rowversion conflicts, unique indexes, the Redis lock, parallel imports.
+- **Coverage:** `dotnet test --settings coverlet.runsettings --collect:"XPlat Code Coverage"`, merged with
+  `dotnet reportgenerator`. CI publishes the merged summary on every run.
 
 ## Running the API outside Docker
 

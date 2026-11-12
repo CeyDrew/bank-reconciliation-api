@@ -5,7 +5,6 @@ using Reconciliation.FakeBank.Statements;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.Configure<StatementOptions>(builder.Configuration.GetSection(StatementOptions.SectionName));
@@ -16,11 +15,6 @@ builder.Services.AddSingleton<WebhookVerifier>();
 builder.Services.AddSingleton<ErpInbox>();
 
 var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
 
 app.UseMiddleware<ChaosMiddleware>();
 
