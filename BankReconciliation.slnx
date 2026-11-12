@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Reconciliation.Api/Reconciliation.Api.csproj" />
+    <Project Path="src/Reconciliation.Application/Reconciliation.Application.csproj" />
+    <Project Path="src/Reconciliation.Domain/Reconciliation.Domain.csproj" />
+    <Project Path="src/Reconciliation.FakeBank/Reconciliation.FakeBank.csproj" />
+    <Project Path="src/Reconciliation.Infrastructure/Reconciliation.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Reconciliation.IntegrationTests/Reconciliation.IntegrationTests.csproj" />
+    <Project Path="tests/Reconciliation.UnitTests/Reconciliation.UnitTests.csproj" />
+  </Folder>
+</Solution>
