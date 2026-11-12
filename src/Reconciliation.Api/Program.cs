@@ -53,7 +53,12 @@ app.UseStatusCodePages();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+    {
+        options.DocumentTitle = "Bank Reconciliation API";
+        options.EnableDeepLinking();
+        options.EnablePersistAuthorization();
+    });
 }
 
 app.UseAuthentication();
