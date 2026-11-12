@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Reconciliation.Application.Auth;
 using Reconciliation.Application.Common;
 using Reconciliation.Application.Customers;
 
@@ -37,8 +39,9 @@ public class CustomersController(CustomerService customers) : ControllerBase
     public Task<CustomerResponse> Update(Guid id, SaveCustomerRequest request, CancellationToken ct) =>
         customers.UpdateAsync(id, request, ct);
 
-    /// <summary>Deletes a customer that has no invoices.</summary>
+    /// <summary>Deletes a customer that has no invoices. Admins only.</summary>
     [HttpDelete("{id:guid}")]
+    [Authorize(Roles = Roles.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]

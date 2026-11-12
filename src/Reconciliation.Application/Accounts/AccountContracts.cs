@@ -6,8 +6,8 @@ namespace Reconciliation.Application.Accounts;
 
 public record AccountResponse(Guid Id, string Name, string Iban, string Currency, bool IsActive, DateTimeOffset CreatedAt)
 {
-    public static AccountResponse From(Account account) => new(
-        account.Id, account.Name, account.Iban.Value, account.Currency, account.IsActive, account.CreatedAt);
+    public static AccountResponse From(Account account, bool revealIban) => new(
+        account.Id, account.Name, Masking.Iban(account.Iban, revealIban)!, account.Currency, account.IsActive, account.CreatedAt);
 }
 
 public record CreateAccountRequest(string Name, string Iban, string Currency);

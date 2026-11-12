@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Reconciliation.Application.Abstractions;
+using Reconciliation.Application.Auditing;
 using Reconciliation.Application.Common;
 using Reconciliation.Domain.Entities;
 
@@ -10,6 +11,7 @@ public class InvoiceService(
     IApplicationDbContext db,
     IValidator<CreateInvoiceRequest> createValidator,
     IValidator<UpdateInvoiceRequest> updateValidator,
+    AuditTrail audit,
     TimeProvider clock)
 {
     public Task<PagedResult<InvoiceResponse>> ListAsync(InvoiceQuery query, CancellationToken ct)
@@ -47,6 +49,7 @@ public class InvoiceService(
         var invoice = new Invoice(request.CustomerId, request.Number, request.IssueDate, request.DueDate,
             request.Amount, request.Currency, clock.GetUtcNow());
         db.Invoices.Add(invoice);
+        audit.Record("invoice.created", "Invoice", invoice.Id, new { invoice.Number, invoice.CustomerId, invoice.Amount, invoice.Currency, invoice.DueDate });
         await db.SaveChangesAsync(ct);
 
         return await GetAsync(invoice.Id, ct);
@@ -59,6 +62,7 @@ public class InvoiceService(
         await EnsureNumberIsFreeAsync(request.Number, exceptId: id, ct);
 
         invoice.Update(request.Number, request.IssueDate, request.DueDate, request.Amount);
+        audit.Record("invoice.updated", "Invoice", invoice.Id, new { invoice.Number, invoice.Amount, invoice.IssueDate, invoice.DueDate });
         await db.SaveChangesAsync(ct);
 
         return InvoiceResponse.From(invoice);
@@ -68,6 +72,7 @@ public class InvoiceService(
     {
         var invoice = await FindAsync(id, ct);
         invoice.Cancel();
+        audit.Record("invoice.cancelled", "Invoice", invoice.Id, new { invoice.Number });
         await db.SaveChangesAsync(ct);
 
         return InvoiceResponse.From(invoice);

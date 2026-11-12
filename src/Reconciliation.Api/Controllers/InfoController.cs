@@ -1,8 +1,10 @@
 using System.Reflection;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Reconciliation.Api.Controllers;
 
+[AllowAnonymous]
 [ApiController]
 [Route("api/v1/[controller]")]
 public class InfoController(IWebHostEnvironment environment) : ControllerBase

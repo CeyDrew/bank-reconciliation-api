@@ -11,6 +11,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<BankTransaction> BankTransactions => Set<BankTransaction>();
     public DbSet<Match> Matches => Set<Match>();
+    public DbSet<User> Users => Set<User>();
+    public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);

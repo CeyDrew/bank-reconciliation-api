@@ -1,13 +1,19 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Reconciliation.Application.Abstractions;
+using Reconciliation.Application.Auditing;
 using Reconciliation.Application.Common;
 using Reconciliation.Domain.Entities;
 using Reconciliation.Domain.ValueObjects;
 
 namespace Reconciliation.Application.Customers;
 
-public class CustomerService(IApplicationDbContext db, IValidator<SaveCustomerRequest> validator, TimeProvider clock)
+public class CustomerService(
+    IApplicationDbContext db,
+    IValidator<SaveCustomerRequest> validator,
+    ICurrentUser currentUser,
+    AuditTrail audit,
+    TimeProvider clock)
 {
     public Task<PagedResult<CustomerResponse>> ListAsync(CustomerQuery query, CancellationToken ct)
     {
@@ -21,11 +27,10 @@ public class CustomerService(IApplicationDbContext db, IValidator<SaveCustomerRe
                 : customers.Where(c => c.Name.Contains(search));
         }
 
-        return customers.OrderBy(c => c.Name).ToPagedResultAsync(query, CustomerResponse.From, ct);
+        return customers.OrderBy(c => c.Name).ToPagedResultAsync(query, ToResponse, ct);
     }
 
-    public async Task<CustomerResponse> GetAsync(Guid id, CancellationToken ct) =>
-        CustomerResponse.From(await FindAsync(id, ct));
+    public async Task<CustomerResponse> GetAsync(Guid id, CancellationToken ct) => ToResponse(await FindAsync(id, ct));
 
     public async Task<CustomerResponse> CreateAsync(SaveCustomerRequest request, CancellationToken ct)
     {
@@ -35,9 +40,10 @@ public class CustomerService(IApplicationDbContext db, IValidator<SaveCustomerRe
 
         var customer = new Customer(request.Name, taxNumber, ParseIban(request.Iban), request.Email, clock.GetUtcNow());
         db.Customers.Add(customer);
+        audit.Record("customer.created", "Customer", customer.Id, AuditDetails(customer));
         await db.SaveChangesAsync(ct);
 
-        return CustomerResponse.From(customer);
+        return ToResponse(customer);
     }
 
     public async Task<CustomerResponse> UpdateAsync(Guid id, SaveCustomerRequest request, CancellationToken ct)
@@ -48,9 +54,10 @@ public class CustomerService(IApplicationDbContext db, IValidator<SaveCustomerRe
         await EnsureTaxNumberIsFreeAsync(taxNumber, exceptId: id, ct);
 
         customer.Update(request.Name, taxNumber, ParseIban(request.Iban), request.Email);
+        audit.Record("customer.updated", "Customer", customer.Id, AuditDetails(customer));
         await db.SaveChangesAsync(ct);
 
-        return CustomerResponse.From(customer);
+        return ToResponse(customer);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken ct)
@@ -62,8 +69,14 @@ public class CustomerService(IApplicationDbContext db, IValidator<SaveCustomerRe
         }
 
         db.Customers.Remove(customer);
+        audit.Record("customer.deleted", "Customer", customer.Id, AuditDetails(customer));
         await db.SaveChangesAsync(ct);
     }
+
+    private CustomerResponse ToResponse(Customer customer) => CustomerResponse.From(customer, currentUser.IsAdmin);
+
+    private static object AuditDetails(Customer c) =>
+        new { c.Name, TaxNumber = c.TaxNumber.Value, Iban = c.Iban?.Masked, c.Email };
 
     private async Task<Customer> FindAsync(Guid id, CancellationToken ct) =>
         await db.Customers.FirstOrDefaultAsync(c => c.Id == id, ct) ?? throw new NotFoundException("Customer", id);

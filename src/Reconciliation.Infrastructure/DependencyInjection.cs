@@ -7,6 +7,7 @@ using Quartz;
 using Reconciliation.Application.Abstractions;
 using Reconciliation.Application.Matching;
 using Reconciliation.Application.Transactions;
+using Reconciliation.Infrastructure.Auth;
 using Reconciliation.Infrastructure.Banking;
 using Reconciliation.Infrastructure.Jobs;
 using Reconciliation.Infrastructure.Locking;
@@ -21,6 +22,7 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddPersistence(configuration);
+        services.AddAuth(configuration);
         services.AddLocking(configuration);
         services.AddBankClient(configuration);
         services.AddJobs(configuration);
@@ -50,6 +52,19 @@ public static class DependencyInjection
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 
         services.AddHealthChecks().AddDbContextCheck<AppDbContext>("database", tags: ["ready"]);
+    }
+
+    private static void AddAuth(this IServiceCollection services, IConfiguration configuration)
+    {
+        // Fails at startup, not at the first login, when the signing key is missing or too short.
+        services.AddOptions<JwtOptions>()
+            .Bind(configuration.GetSection(JwtOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.Configure<SeedUserOptions>(configuration.GetSection(SeedUserOptions.SectionName));
+
+        services.AddSingleton<ITokenService, JwtTokenService>();
+        services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
     }
 
     private static void AddLocking(this IServiceCollection services, IConfiguration configuration)

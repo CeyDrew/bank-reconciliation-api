@@ -26,6 +26,12 @@ public class BankTransaction : Entity
 
     public decimal MatchedAmount { get; private set; }
     public TransactionStatus Status { get; private set; }
+
+    /// <summary>
+    /// Set when a person reverses a match on this transaction, so the matching engine
+    /// doesn't re-apply the match the person just rejected.
+    /// </summary>
+    public bool RequiresManualMatching { get; private set; }
     public DateTimeOffset ImportedAt { get; private init; }
 
     public bool IsIncoming => Amount > 0;
@@ -100,6 +106,19 @@ public class BankTransaction : Entity
         }
 
         Status = TransactionStatus.Ignored;
+    }
+
+    public void ExcludeFromAutomaticMatching() => RequiresManualMatching = true;
+
+    /// <summary>Puts an ignored transaction back into reconciliation.</summary>
+    public void Restore()
+    {
+        if (Status != TransactionStatus.Ignored)
+        {
+            throw new DomainException("Only ignored transactions can be restored.");
+        }
+
+        Status = TransactionStatus.Unmatched;
     }
 
     private void RefreshStatus() =>

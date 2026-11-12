@@ -66,4 +66,14 @@ public class Match : Entity
 
         return new Match(transaction, invoice, amount, score, reason.Trim(), method, createdBy, createdAt);
     }
+
+    /// <summary>
+    /// Undoes this match on both sides. The caller removes the match afterwards.
+    /// Requires <see cref="Transaction"/> and <see cref="Invoice"/> to be loaded.
+    /// </summary>
+    public void Reverse()
+    {
+        Transaction.ReverseMatch(Amount);
+        Invoice.ReversePayment(Amount);
+    }
 }

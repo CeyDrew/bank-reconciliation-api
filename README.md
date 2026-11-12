@@ -5,7 +5,7 @@ Work in progress. A .NET 10 Web API that fetches bank transactions, matches inco
 ## Quick start
 
 ```bash
-cp .env.example .env   # set MSSQL_SA_PASSWORD
+cp .env.example .env   # set the database password, JWT key and demo user passwords
 docker compose up --build
 ```
 
@@ -14,6 +14,29 @@ docker compose up --build
 - FakeBank: http://localhost:8081
 
 Compose applies migrations and seeds fictional demo data (2 accounts, 4 customers, 8 invoices) on startup.
+
+## Security
+
+- **Sign in:** `POST /api/v1/auth/login` with `admin@example.com` or `accountant@example.com` and the passwords from `.env`,
+  then click **Authorize** in Swagger UI and paste the `accessToken`.
+- **JWT** (HMAC-SHA256, 60 minutes). The signing key comes from `.env`; the API refuses to start without a key of at least 32 characters.
+- **Roles:** every endpoint requires a signed-in user. Accountants read everything, manage customers and invoices and do
+  manual matching. Admins can additionally manage bank accounts and users, delete customers and read the audit log.
+- **Passwords** are hashed with PBKDF2 (ASP.NET Core Identity hasher). Login is limited to 5 attempts per minute per IP
+  and doesn't reveal whether an email exists.
+- **IBAN masking:** non-admin users see `TR71******************0011`.
+- **Audit log:** logins, manual matches, reversals, automatic matches and changes to customers, invoices, accounts and users are
+  recorded in the same database transaction as the change (`GET /api/v1/audit-log`).
+
+## Manual matching
+
+- `POST /api/v1/transactions/{id}/matches`: match a transaction to one or more invoices by hand.
+- `DELETE /api/v1/matches/{id}` with a reason: undo a match. The transaction is then excluded from automatic matching,
+  so the engine doesn't re-apply a match a person rejected.
+- `POST /api/v1/transactions/{id}/ignore` and `/restore`: take a transaction (e.g. a bank fee) out of reconciliation and back.
+- `GET /api/v1/transactions?status=Unmatched&incoming=true`: what still needs attention.
+
+Manual changes and automatic reconciliation share one lock, so they never update the same invoice at the same time.
 
 ## How transactions arrive
 

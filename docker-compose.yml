@@ -12,6 +12,9 @@ services:
       Database__Seed: "true"
       FakeBank__BaseUrl: "http://fake-bank:8080"
       Jobs__BankSync__Enabled: "true"
+      Jwt__SigningKey: "${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env}"
+      SeedUsers__AdminPassword: "${SEED_ADMIN_PASSWORD:?Set SEED_ADMIN_PASSWORD in .env}"
+      SeedUsers__AccountantPassword: "${SEED_ACCOUNTANT_PASSWORD:?Set SEED_ACCOUNTANT_PASSWORD in .env}"
     ports:
       - "8080:8080"
     depends_on:

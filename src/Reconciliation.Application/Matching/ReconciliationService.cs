@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Reconciliation.Application.Abstractions;
+using Reconciliation.Application.Auditing;
 using Reconciliation.Application.Common;
 using Reconciliation.Domain.Entities;
 using Reconciliation.Domain.Enums;
@@ -28,6 +29,7 @@ public class ReconciliationService(
     IApplicationDbContext db,
     MatchingEngine engine,
     IDistributedLock distributedLock,
+    AuditTrail audit,
     TimeProvider clock,
     IOptions<ReconciliationOptions> options,
     ILogger<ReconciliationService> logger)
@@ -47,7 +49,7 @@ public class ReconciliationService(
 
         // Partially matched transactions are left alone: their remainder is an overpayment or awaits a person.
         var transactions = await db.BankTransactions
-            .Where(t => t.Status == TransactionStatus.Unmatched && t.Amount > 0)
+            .Where(t => t.Status == TransactionStatus.Unmatched && t.Amount > 0 && !t.RequiresManualMatching)
             .OrderBy(t => t.BookingDate).ThenBy(t => t.ImportedAt)
             .ToListAsync(ct);
         if (transactions.Count == 0)
@@ -77,8 +79,17 @@ public class ReconciliationService(
 
             foreach (var allocation in result.Allocations)
             {
-                db.Matches.Add(Match.Create(transaction, invoicesById[allocation.InvoiceId], allocation.Amount,
-                    allocation.Score, allocation.Reason, MatchMethod.Automatic, SystemUser, clock.GetUtcNow()));
+                var match = Match.Create(transaction, invoicesById[allocation.InvoiceId], allocation.Amount,
+                    allocation.Score, allocation.Reason, MatchMethod.Automatic, SystemUser, clock.GetUtcNow());
+                db.Matches.Add(match);
+                audit.Record("match.created", "Match", match.Id, new
+                {
+                    TransactionId = transaction.Id,
+                    allocation.InvoiceNumber,
+                    allocation.Amount,
+                    Method = MatchMethod.Automatic.ToString(),
+                    allocation.Score
+                });
                 matchedAmount += allocation.Amount;
             }
 

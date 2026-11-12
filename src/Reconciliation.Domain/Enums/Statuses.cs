@@ -21,3 +21,9 @@ public enum MatchMethod
     Automatic,
     Manual
 }
+
+public enum UserRole
+{
+    Admin,
+    Accountant
+}

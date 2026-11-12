@@ -60,6 +60,51 @@ namespace Reconciliation.Infrastructure.Persistence.Migrations
                     b.ToTable("Accounts");
                 });
 
+            modelBuilder.Entity("Reconciliation.Domain.Entities.AuditEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("Details")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<Guid?>("EntityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OccurredAt");
+
+                    b.HasIndex("EntityType", "EntityId");
+
+                    b.ToTable("AuditLog", (string)null);
+                });
+
             modelBuilder.Entity("Reconciliation.Domain.Entities.BankTransaction", b =>
                 {
                     b.Property<Guid>("Id")
@@ -109,6 +154,9 @@ namespace Reconciliation.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("MatchedAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("RequiresManualMatching")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -272,6 +320,42 @@ namespace Reconciliation.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("CK_Matches_Score", "[Score] BETWEEN 0 AND 100");
                         });
+                });
+
+            modelBuilder.Entity("Reconciliation.Domain.Entities.User", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("Reconciliation.Domain.Entities.BankTransaction", b =>

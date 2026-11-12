@@ -87,3 +87,31 @@ internal class MatchConfiguration : IEntityTypeConfiguration<Match>
         builder.ToTable(t => t.HasCheckConstraint("CK_Matches_Amount", "[Amount] > 0"));
     }
 }
+
+internal class UserConfiguration : IEntityTypeConfiguration<User>
+{
+    public void Configure(EntityTypeBuilder<User> builder)
+    {
+        builder.Property(u => u.Email).HasMaxLength(254);
+        builder.Property(u => u.PasswordHash).HasMaxLength(500).IsUnicode(false);
+        builder.Property(u => u.Role).HasConversion<string>().HasMaxLength(20);
+
+        builder.HasIndex(u => u.Email).IsUnique();
+    }
+}
+
+internal class AuditEntryConfiguration : IEntityTypeConfiguration<AuditEntry>
+{
+    public void Configure(EntityTypeBuilder<AuditEntry> builder)
+    {
+        builder.ToTable("AuditLog");
+
+        builder.Property(a => a.UserName).HasMaxLength(254);
+        builder.Property(a => a.Action).HasMaxLength(100).IsUnicode(false);
+        builder.Property(a => a.EntityType).HasMaxLength(100).IsUnicode(false);
+        builder.Property(a => a.Details).HasMaxLength(4000);
+
+        builder.HasIndex(a => a.OccurredAt);
+        builder.HasIndex(a => new { a.EntityType, a.EntityId });
+    }
+}

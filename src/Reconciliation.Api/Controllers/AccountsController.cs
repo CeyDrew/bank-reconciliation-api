@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Reconciliation.Application.Accounts;
+using Reconciliation.Application.Auth;
 
 namespace Reconciliation.Api.Controllers;
 
@@ -18,6 +20,7 @@ public class AccountsController(AccountService accounts) : ControllerBase
     public Task<AccountResponse> Get(Guid id, CancellationToken ct) => accounts.GetAsync(id, ct);
 
     [HttpPost]
+    [Authorize(Roles = Roles.Admin)]
     [ProducesResponseType<AccountResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
@@ -29,6 +32,7 @@ public class AccountsController(AccountService accounts) : ControllerBase
 
     /// <summary>Renames or (de)activates an account.</summary>
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = Roles.Admin)]
     [ProducesResponseType<AccountResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

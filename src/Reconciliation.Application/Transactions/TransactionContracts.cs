@@ -17,17 +17,21 @@ public record TransactionResponse(
     string? CounterpartyName,
     string? CounterpartyIban,
     TransactionStatus Status,
+    bool RequiresManualMatching,
     DateTimeOffset ImportedAt)
 {
-    public static TransactionResponse From(BankTransaction t) => new(
+    public static TransactionResponse From(BankTransaction t, bool revealIban) => new(
         t.Id, t.AccountId, t.ExternalId, t.BookingDate, t.Amount, t.MatchedAmount, t.UnmatchedAmount, t.Currency,
-        t.Description, t.CounterpartyName, t.CounterpartyIban, t.Status, t.ImportedAt);
+        t.Description, t.CounterpartyName, Masking.Iban(t.CounterpartyIban, revealIban), t.Status, t.RequiresManualMatching, t.ImportedAt);
 }
 
 public record TransactionQuery : PageRequest
 {
     public Guid? AccountId { get; init; }
     public TransactionStatus? Status { get; init; }
+
+    /// <summary>true: money in, false: money out.</summary>
+    public bool? Incoming { get; init; }
     public DateOnly? From { get; init; }
     public DateOnly? To { get; init; }
 }

@@ -15,6 +15,8 @@ public interface IApplicationDbContext
     DbSet<Invoice> Invoices { get; }
     DbSet<BankTransaction> BankTransactions { get; }
     DbSet<Match> Matches { get; }
+    DbSet<User> Users { get; }
+    DbSet<AuditEntry> AuditEntries { get; }
 
     ChangeTracker ChangeTracker { get; }
 

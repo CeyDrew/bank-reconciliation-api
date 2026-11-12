@@ -6,8 +6,8 @@ namespace Reconciliation.Application.Customers;
 
 public record CustomerResponse(Guid Id, string Name, string TaxNumber, string? Iban, string? Email, DateTimeOffset CreatedAt)
 {
-    public static CustomerResponse From(Customer customer) => new(
-        customer.Id, customer.Name, customer.TaxNumber.Value, customer.Iban?.Value, customer.Email, customer.CreatedAt);
+    public static CustomerResponse From(Customer customer, bool revealIban) => new(
+        customer.Id, customer.Name, customer.TaxNumber.Value, Masking.Iban(customer.Iban, revealIban), customer.Email, customer.CreatedAt);
 }
 
 public record CustomerQuery : PageRequest

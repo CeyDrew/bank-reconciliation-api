@@ -2,10 +2,13 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Reconciliation.Application.Accounts;
+using Reconciliation.Application.Auditing;
+using Reconciliation.Application.Auth;
 using Reconciliation.Application.Customers;
 using Reconciliation.Application.Invoices;
 using Reconciliation.Application.Matching;
 using Reconciliation.Application.Transactions;
+using Reconciliation.Application.Users;
 
 namespace Reconciliation.Application;
 
@@ -29,6 +32,12 @@ public static class DependencyInjection
         services.AddSingleton<MatchingEngine>();
         services.AddScoped<ReconciliationService>();
         services.AddScoped<MatchQueries>();
+        services.AddScoped<ManualMatchingService>();
+
+        services.AddScoped<AuditTrail>();
+        services.AddScoped<AuditQueries>();
+        services.AddScoped<AuthService>();
+        services.AddScoped<UserService>();
 
         return services;
     }
