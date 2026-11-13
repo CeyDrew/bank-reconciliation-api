@@ -1,5 +1,7 @@
 # bank-reconciliation-api
 
+[![CI](https://github.com/CeyDrew/bank-reconciliation-api/actions/workflows/ci.yml/badge.svg)](https://github.com/CeyDrew/bank-reconciliation-api/actions/workflows/ci.yml)
+
 A .NET 10 Web API that imports a company's bank transactions, matches incoming payments to open invoices,
 reports what is still unexplained and notifies the ERP through signed, idempotent webhooks.
 
